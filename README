@@ -1,0 +1,18 @@
+ This code exports BBDB data to vCard (M-x bbdb-export-vcard-v3) and
+ other formats.
+
+ This exporter processes three functions.
+
+   +----------------------+
+   | bbdb-export-p        |  This determines which BBDB records to be exported.
+   +----------+-----------+
+              |
+              v              This converts structured BBDB fields to
+   +----------+-----------+  flat alist with string.  You can add new field
+   | bbdb-export-info     |  if you need.  `:name-format' determines whether
+   +----------+-----------+  name is Asian ("last-first") or European ("first-last")
+              |              style.
+              v
+   +----------+-----------+
+   | bbdb-export-template |  This exports flat alist to specified format.
+   +----------------------+
