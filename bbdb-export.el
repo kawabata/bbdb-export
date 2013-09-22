@@ -5,7 +5,7 @@
 ;; Author: KAWABATA, Taichi <kawabata.taichi_at_gmail.com>
 ;; Created: 2008-05-10
 ;; Keywords: bbdb
-;; Version: 1.130913
+;; Version: 1.130922
 ;; URL: http://github.com/kawabata/bbdb-export/
 
 ;;; Commentary:
@@ -104,7 +104,49 @@ See `bbdb-export-vcard-template' for example of template format."
         (bbdb-export-template 'bbdb-export-template-csv))
     (bbdb-export)))
 
-;;; BBDB Field extraction functions
+;;; Record to Alist
+;;;; Main
+
+(defun bbdb-export-info (record)
+  (let* ((furigana     (bbdb-record-field record 'furigana))
+         (lastname     (bbdb-record-lastname record))
+         (firstname    (bbdb-record-firstname record))
+         (name-format  (bbdb-record-field record 'name-format))
+         (mails        (bbdb-record-mail record))
+         (email-work   (bbdb-export--email-work mails))
+         (email-cell   (bbdb-export--email-cell mails))
+         (email-home   (bbdb-export--email-home mails (list email-work
+                                                           email-cell))))
+    `((:firstname      . ,firstname)
+      (:lastname       . ,lastname)
+      (:name-format    . ,(if (stringp name-format) name-format
+                            (symbol-name bbdb-name-format)))
+      (:organization   . ,(bbdb-record-organization record))
+
+      (:furigana       . ,furigana)
+      (:furigana-last  . ,(and furigana (car (split-string furigana))))
+      (:furigana-first . ,(and furigana (apply 'concat (cdr (split-string furigana)))))
+
+      (:phone-work     . ,(bbdb-export--phone-label record "work"))
+      (:phone-work2    . ,(bbdb-export--phone-label record "work2"))
+      (:phone-home     . ,(bbdb-export--phone-label record "home"))
+      (:phone-cell     . ,(bbdb-export--phone-label record "cell"))
+
+      (:email-home     . ,email-home)
+      (:email-work     . ,email-work)
+      (:email-cell     . ,email-cell)
+
+      (:address-home   . ,(bbdb-export--address-label record "home"))
+      (:address-work   . ,(bbdb-export--address-label record "work"))
+      (:address-jikka  . ,(bbdb-export--address-label record "実家"))
+
+      ;;(attribution    . ,(bbdb-record-field record 'attribution))
+      (:notes          . ,(bbdb-record-field record 'notes))
+      (:birthday       . ,(bbdb-record-field record 'birthday))
+      (:nenga          . ,(bbdb-record-field record 'nenga))
+      (:www            . ,(bbdb-record-field record 'www)))))
+
+;;;; BBDB Field Extraction
 
 (defun bbdb-export--label (record call-func label-func label)
   (elt (cl-find-if (lambda (item) (equal label (funcall label-func item)))
@@ -155,47 +197,6 @@ See `bbdb-export-vcard-template' for example of template format."
   ;;string) ;; for debugging, replace above line with this.
 
 
-;;; Record to Alist
-
-(defun bbdb-export-info (record)
-  (let* ((furigana     (bbdb-record-field record 'furigana))
-         (lastname     (bbdb-record-lastname record))
-         (firstname    (bbdb-record-firstname record))
-         (name-format  (bbdb-record-field record 'name-format))
-         (mails        (bbdb-record-mail record))
-         (email-work   (bbdb-export--email-work mails))
-         (email-cell   (bbdb-export--email-cell mails))
-         (email-home   (bbdb-export--email-home mails (list email-work
-                                                           email-cell))))
-    `((:firstname      . ,firstname)
-      (:lastname       . ,lastname)
-      (:name-format    . ,(if (stringp name-format) name-format
-                            (symbol-name bbdb-name-format)))
-      (:organization   . ,(bbdb-record-organization record))
-
-      (:furigana       . ,furigana)
-      (:furigana-last  . ,(and furigana (car (split-string furigana))))
-      (:furigana-first . ,(and furigana (apply 'concat (cdr (split-string furigana)))))
-
-      (:phone-work     . ,(bbdb-export--phone-label record "work"))
-      (:phone-work2    . ,(bbdb-export--phone-label record "work2"))
-      (:phone-home     . ,(bbdb-export--phone-label record "home"))
-      (:phone-cell     . ,(bbdb-export--phone-label record "cell"))
-
-      (:email-home     . ,email-home)
-      (:email-work     . ,email-work)
-      (:email-cell     . ,email-cell)
-
-      (:address-home   . ,(bbdb-export--address-label record "home"))
-      (:address-work   . ,(bbdb-export--address-label record "work"))
-      (:address-jikka  . ,(bbdb-export--address-label record "実家"))
-
-      ;;(attribution    . ,(bbdb-record-field record 'attribution))
-      (:notes          . ,(bbdb-record-field record 'notes))
-      (:birthday       . ,(bbdb-record-field record 'birthday))
-      (:nenga          . ,(bbdb-record-field record 'nenga))
-      (:www            . ,(bbdb-record-field record 'www)))))
-
 ;;; Templates
 
 (defun bbdb-export-template-vcard-v2 (info)
@@ -205,18 +206,18 @@ See `bbdb-export-vcard-template' for example of template format."
      "BEGIN:VCARD\n"
      "VERSION:2.1\n"
      "N;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:"
-         (bbdb-export-quote ,:lastname) ";"
-         (bbdb-export-quote ,:firstname) ";;;\n"
+         (bbdb-export--quote ,:lastname) ";"
+         (bbdb-export--quote ,:firstname) ";;;\n"
      "FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:"
          (if (equal :name-format "last-first")
-           (concat (bbdb-export-quote ,:lastname) " "
-                   (bbdb-export-quote ,:firstname))
-           (concat (bbdb-export-quote ,:firstname) " "
-                   (bbdb-export-quote ,:lastname))) "\n"
+           (concat (bbdb-export--quote ,:lastname) " "
+                   (bbdb-export--quote ,:firstname))
+           (concat (bbdb-export--quote ,:firstname) " "
+                   (bbdb-export--quote ,:lastname))) "\n"
      "X-PHONETIC-LAST-NAME;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:"
-     (bbdb-export-quote (ucs-normalize-NFKC-string,:furigana-last)) "\n"
+     (bbdb-export--quote (ucs-normalize-NFKC-string,:furigana-last)) "\n"
      "X-PHONETIC-FIRST-NAME;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:"
-     (bbdb-export-quote (ucs-normalize-NFKC-string ,:furigana-first)) "\n"
+     (bbdb-export--quote (ucs-normalize-NFKC-string ,:furigana-first)) "\n"
      (when ,:phone-work
        (concat "TEL;WORK;VOICE:" (bbdb-export--remove-hyphens ,:phone-work) "\n"))
      (when ,:phone-home
@@ -229,9 +230,9 @@ See `bbdb-export-vcard-template' for example of template format."
      (when ,:email-home   (concat "EMAIL;HOME:" ,:email-home "\n"))
      (when ,:email-cell   (concat "EMAIL;CELL:" ,:email-cell "\n"))
      (when ,:address-work (concat "ADR;WORK;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:;"
-                                  (bbdb-export-quote ,:address-work) "\n"))
+                                  (bbdb-export--quote ,:address-work) "\n"))
      (when ,:address-home (concat "ADR;HOME;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:;"
-                                  (bbdb-export-quote ,:address-home) "\n"))
+                                  (bbdb-export--quote ,:address-home) "\n"))
      (when ,:www (concat "URL:" ,:www "\n"))
      (when ,:birthday (concat "BDAY:" ,:birthday "\n"))
      "X-CLASS:PUBLIC\n"
