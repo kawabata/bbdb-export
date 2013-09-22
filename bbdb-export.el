@@ -28,16 +28,8 @@
 ;;   +----------+-----------+
 ;;   | bbdb-export-template |  This exports flat alist to specified format.
 ;;   +----------------------+
-;;
-;; For bbdb-import, following-code may be used.
-;;  (let ((fresh-record (make-vector bbdb-record-length nil)))
-;;    (bbdb-record-set-cache fresh-record
-;;                           (make-vector bbdb-cache-length nil))
-;;    (if vcard-rev            ; For fresh records,
-;;        (bbdb-record-putprop ; set creation-date from vcard-rev
-;;         fresh-record 'creation-date vcard-rev)
-;;      (run-hook-with-args 'bbdb-create-hook fresh-record))
-;;    fresh-record)))
+
+;;; Code:
 
 (require 'bbdb-com)
 (require 'cl-lib)
